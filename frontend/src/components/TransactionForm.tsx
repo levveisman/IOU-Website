@@ -13,7 +13,11 @@ import {
 } from '@mui/material';
 import { TransitionProps } from '@mui/material/transitions';
 import EntitySelector from './EntitySelector';
-import { Entity } from '../utils/debtTrackerUtils';
+import {
+  Entity,
+  localDateInputString,
+  dateInputToTransactionTimestamp,
+} from '../utils/debtTrackerUtils';
 import {
   createDebtTransaction,
   CreateDebtTransactionData,
@@ -39,9 +43,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
   const [receiverEntity, setReceiverEntity] = useState<Entity | null>(null);
   const [amount, setAmount] = useState<string>('');
   const [description, setDescription] = useState<string>('');
-  const [date, setDate] = useState<string>(
-    new Date().toISOString().split('T')[0]
-  );
+  const [date, setDate] = useState<string>(localDateInputString());
   const [showError, setShowError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -92,9 +94,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
     try {
       setSubmitting(true);
 
-      // Convert date to timestamp (start of day in local timezone)
-      const selectedDate = new Date(date + 'T00:00:00');
-      const timestamp = selectedDate.getTime();
+      const timestamp = dateInputToTransactionTimestamp(date);
 
       // Prepare data for API
       const transactionData: CreateDebtTransactionData = {
@@ -113,7 +113,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
       setReceiverEntity(null);
       setAmount('');
       setDescription('');
-      setDate(new Date().toISOString().split('T')[0]);
+      setDate(localDateInputString());
 
       // Notify parent to trigger refresh
       onTransactionCreated();

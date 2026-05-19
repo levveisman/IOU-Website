@@ -22,7 +22,13 @@ import ClearIcon from '@mui/icons-material/Clear';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { DebtTransaction, deleteDebtTransaction, updateDebtTransaction, CreateDebtTransactionData } from '../api/debtTrackerApi';
-import { formatEntityName, formatCurrency, formatTimestamp, Entity } from '../utils/debtTrackerUtils';
+import {
+  formatEntityName,
+  formatCurrency,
+  formatTimestamp,
+  dateInputToTransactionTimestamp,
+  Entity,
+} from '../utils/debtTrackerUtils';
 import { useScrollPreservation } from '../hooks/useScrollPreservation';
 import EntitySelector from './EntitySelector';
 
@@ -204,9 +210,7 @@ const TransactionHistory: React.FC<TransactionHistoryProps> = ({
     try {
       setSubmitting(true);
 
-      // Convert date to timestamp (start of day in local timezone)
-      const selectedDate = new Date(date + 'T00:00:00');
-      const timestamp = selectedDate.getTime();
+      const timestamp = dateInputToTransactionTimestamp(date, transaction.timestamp);
 
       // Prepare data for API
       const transactionData: CreateDebtTransactionData = {

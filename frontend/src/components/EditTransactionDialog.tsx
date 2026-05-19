@@ -12,7 +12,7 @@ import {
 } from '@mui/material';
 import { TransitionProps } from '@mui/material/transitions';
 import EntitySelector from './EntitySelector';
-import { Entity } from '../utils/debtTrackerUtils';
+import { Entity, dateInputToTransactionTimestamp } from '../utils/debtTrackerUtils';
 import {
   updateDebtTransaction,
   CreateDebtTransactionData,
@@ -121,9 +121,10 @@ const EditTransactionDialog: React.FC<EditTransactionDialogProps> = ({
     try {
       setSubmitting(true);
 
-      // Convert date to timestamp (start of day in local timezone)
-      const selectedDate = new Date(date + 'T00:00:00');
-      const timestamp = selectedDate.getTime();
+      const timestamp = dateInputToTransactionTimestamp(
+        date,
+        transaction?.timestamp
+      );
 
       // Prepare data for API
       const transactionData: CreateDebtTransactionData = {
