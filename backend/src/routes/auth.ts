@@ -6,6 +6,7 @@ import { SessionUser, User } from '../types/models';
 import { isAuthenticated } from '../middleware/auth';
 import { generateTwoFactorSecret, verifyTwoFactorToken } from '../utils/twoFactor';
 import pool from '../config/database';
+import { applySessionCookieMaxAge } from '../utils/sessionCookie';
 
 const router = Router();
 
@@ -30,20 +31,14 @@ router.post('/login', (req: Request, res: Response, next: NextFunction) => {
       return res.status(401).json({ error: info?.message || 'Authentication failed' });
     }
 
-    const { rememberMe } = req.body;
-
-    // Set session cookie duration based on remember me
-    if (rememberMe) {
-      // 30 days for remember me
-      req.session.cookie.maxAge = 30 * 24 * 60 * 60 * 1000;
-    } else {
-      // Session cookie (expires when browser closes)
-      req.session.cookie.maxAge = undefined as any;
-    }
+    const rememberMe = Boolean(req.body.rememberMe);
 
     // Check if 2FA is enabled
     if (user.twoFactorEnabled) {
       req.session.pendingTwoFactorUserId = user.id;
+      req.session.rememberMe = rememberMe;
+      // Pending session: no logIn yet — safe to set cookie lifetime for the 2FA step
+      applySessionCookieMaxAge(req, rememberMe);
       return res.json({
         requiresTwoFactor: true,
         message: 'Please provide 2FA code',
@@ -55,6 +50,9 @@ router.post('/login', (req: Request, res: Response, next: NextFunction) => {
       if (loginErr) {
         return res.status(500).json({ error: 'Login failed' });
       }
+
+      // After logIn, Passport regenerates the session — set maxAge here
+      applySessionCookieMaxAge(req, rememberMe);
 
       return res.json({
         user: sessionUser,
@@ -111,12 +109,16 @@ router.post('/verify-2fa', async (req: Request, res: Response) => {
       updatedAt: row.updated_at,
     };
 
+    const rememberMe = Boolean(req.session.rememberMe);
     delete req.session.pendingTwoFactorUserId;
+    delete req.session.rememberMe;
 
     req.logIn(sessionUser, (err: any) => {
       if (err) {
         return res.status(500).json({ error: 'Login failed' });
       }
+
+      applySessionCookieMaxAge(req, rememberMe);
 
       return res.json({
         user: sessionUser,
