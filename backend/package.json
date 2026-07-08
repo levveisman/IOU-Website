@@ -18,6 +18,7 @@
     "@types/axios": "^0.9.36",
     "axios": "^1.16.1",
     "bcrypt": "^6.0.0",
+    "connect-redis": "^8.1.0",
     "cors": "^2.8.5",
     "date-fns": "^3.0.6",
     "date-fns-tz": "^2.0.0",
@@ -28,6 +29,7 @@
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",
     "pg": "^8.11.3",
+    "redis": "^4.7.1",
     "speakeasy": "^2.0.0",
     "uuid": "^13.0.0"
   },
@@ -51,5 +53,3 @@
     "vitest": "^3.2.4"
   }
 }
-
-

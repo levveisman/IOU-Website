@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import session from 'express-session';
 import pool from './config/database';
+import { buildSessionOptions } from './config/sessionStore';
 import { ensureRuntimeSchema } from './scripts/ensureRuntimeSchema';
 import passport from './middleware/auth';
 import authRoutes from './routes/auth';
@@ -17,7 +18,6 @@ import salesItemsRoutes from './routes/salesItems';
 import debtTransactionsV2Routes from './routes/debtTransactionsV2';
 import debtRecurrenceTemplatesRoutes from './routes/debtRecurrenceTemplates';
 import { startDebtRecurrenceScheduler } from './jobs/debtRecurrenceJob';
-import { startPublicHolidayImportScheduler } from './jobs/publicHolidayImportJob';
 
 dotenv.config();
 
@@ -64,75 +64,42 @@ if (isProd) {
   app.set('trust proxy', 1);
 }
 
-// Session configuration
-app.use(
-  session({
-    secret: sessionSecret,
-    resave: false,
-    saveUninitialized: false,
-    proxy: isProd,
-    cookie: {
-      secure: cookieSecure,
-      httpOnly: true,
-      maxAge: undefined,
-      sameSite: 'lax',
-    },
-  })
-);
+function registerRoutes(): void {
+  // Health check endpoint
+  app.get('/health', async (req, res) => {
+    try {
+      await pool.query('SELECT NOW()');
+      res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    } catch (error) {
+      res.status(500).json({ status: 'error', message: 'Database connection failed' });
+    }
+  });
 
-// Initialize Passport
-app.use(passport.initialize());
-app.use(passport.session());
+  app.get('/api', (req, res) => {
+    res.json({ message: 'UOMi API' });
+  });
 
-// Health check endpoint
-app.get('/health', async (req, res) => {
-  try {
-    await pool.query('SELECT NOW()');
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
-  } catch (error) {
-    res.status(500).json({ status: 'error', message: 'Database connection failed' });
-  }
-});
-
-// API routes will be added here
-app.get('/api', (req, res) => {
-  res.json({ message: 'UOMi API' });
-});
-
-// Authentication routes
-app.use('/api/auth', authRoutes);
-
-// User management routes
-app.use('/api/users', usersRoutes);
-
-// Leave routes
-app.use('/api/leave', leaveRoutes);
-
-// Holiday routes
-app.use('/api/holidays', holidaysRoutes);
-
-// Holiday import routes
-app.use('/api/holiday-import', holidayImportRoutes);
-
-// Closed date routes
-app.use('/api/closed-dates', closedDatesRoutes);
-
-// Birthday routes
-app.use('/api/birthdays', birthdaysRoutes);
-
-// Sales transaction routes
-app.use('/api/sales', salesTransactionsRoutes);
-
-// Sales items routes
-app.use('/api/sales-items', salesItemsRoutes);
-
-// Debt transaction v2 routes
-app.use('/api/debt-transactions-v2', debtTransactionsV2Routes);
-
-// Global monthly debt recurrence templates
-app.use('/api/debt-recurrence-templates', debtRecurrenceTemplatesRoutes);
+  app.use('/api/auth', authRoutes);
+  app.use('/api/users', usersRoutes);
+  app.use('/api/leave', leaveRoutes);
+  app.use('/api/holidays', holidaysRoutes);
+  app.use('/api/holiday-import', holidayImportRoutes);
+  app.use('/api/closed-dates', closedDatesRoutes);
+  app.use('/api/birthdays', birthdaysRoutes);
+  app.use('/api/sales', salesTransactionsRoutes);
+  app.use('/api/sales-items', salesItemsRoutes);
+  app.use('/api/debt-transactions-v2', debtTransactionsV2Routes);
+  app.use('/api/debt-recurrence-templates', debtRecurrenceTemplatesRoutes);
+}
 
 async function start() {
+  const sessionOptions = await buildSessionOptions(sessionSecret, isProd, cookieSecure);
+  app.use(session(sessionOptions));
+  app.use(passport.initialize());
+  app.use(passport.session());
+
+  registerRoutes();
+
   await ensureRuntimeSchema();
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
