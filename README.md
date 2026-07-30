@@ -106,6 +106,10 @@ DB_PASSWORD=postgres
 DB_TIMEZONE=Australia/Melbourne
 SESSION_SECRET=your-secret-key-change-in-production
 NODE_ENV=development
+
+# Skip LoginPage in local dev (auto-auth as DEV_USERNAME; ignored in production)
+SKIP_AUTH=true
+DEV_USERNAME=Leva
 ```
 
 Optional production-oriented variables:

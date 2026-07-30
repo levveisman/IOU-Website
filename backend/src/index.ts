@@ -5,7 +5,7 @@ import session from 'express-session';
 import pool from './config/database';
 import { buildSessionOptions } from './config/sessionStore';
 import { ensureRuntimeSchema } from './scripts/ensureRuntimeSchema';
-import passport from './middleware/auth';
+import passport, { attachDevUserIfSkipAuth, isSkipAuthEnabled } from './middleware/auth';
 import authRoutes from './routes/auth';
 import usersRoutes from './routes/users';
 import leaveRoutes from './routes/leave';
@@ -78,6 +78,15 @@ function registerRoutes(): void {
   app.get('/api', (req, res) => {
     res.json({ message: 'UOMi API' });
   });
+
+  app.use(attachDevUserIfSkipAuth);
+
+  if (isSkipAuthEnabled()) {
+    console.warn(
+      `⚠️  SKIP_AUTH enabled — auto-authenticated as "${process.env.DEV_USERNAME || 'Leva'}" (login skipped)`
+    );
+  }
+
 
   app.use('/api/auth', authRoutes);
   app.use('/api/users', usersRoutes);

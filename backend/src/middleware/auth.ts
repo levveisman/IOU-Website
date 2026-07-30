@@ -83,6 +83,52 @@ passport.deserializeUser(async (id: string, done: any) => {
   }
 });
 
+/** Dev-only: skip login when SKIP_AUTH=true (never in production). */
+export const isSkipAuthEnabled = (): boolean =>
+  process.env.SKIP_AUTH === 'true' && process.env.NODE_ENV !== 'production';
+
+/**
+ * When SKIP_AUTH is enabled, attach DEV_USERNAME (default Leva) as req.user
+ * so /api/auth/me and protected routes work without logging in.
+ */
+export const attachDevUserIfSkipAuth = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  if (!isSkipAuthEnabled() || req.isAuthenticated()) {
+    return next();
+  }
+
+  try {
+    const username = process.env.DEV_USERNAME || 'Leva';
+    const result = await pool.query(
+      'SELECT id, username, two_factor_enabled, created_at, updated_at FROM users WHERE username = $1',
+      [username]
+    );
+
+    if (result.rows.length === 0) {
+      console.warn(
+        `[SKIP_AUTH] Dev user "${username}" not found — run npm run setup-db, or set DEV_USERNAME`
+      );
+      return next();
+    }
+
+    const row = result.rows[0];
+    req.user = {
+      id: row.id,
+      username: row.username,
+      twoFactorEnabled: row.two_factor_enabled,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    } satisfies SessionUser;
+
+    return next();
+  } catch (error) {
+    return next(error);
+  }
+};
+
 // Middleware to check if user is authenticated
 export const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
   if (req.isAuthenticated()) {
