@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { enAU } from 'date-fns/locale';
 import { store } from './store';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { useBirthdayNotifications } from './hooks/useBirthdayNotifications';
@@ -85,7 +86,7 @@ const AppContent: React.FC = () => {
 function App() {
   return (
     <Provider store={store}>
-      <LocalizationProvider dateAdapter={AdapterDateFns}>
+      <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={enAU}>
         <ThemeProvider theme={theme}>
           <CssBaseline />
           <BrowserRouter>
