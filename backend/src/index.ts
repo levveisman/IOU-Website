@@ -17,6 +17,7 @@ import salesTransactionsRoutes from './routes/salesTransactions';
 import salesItemsRoutes from './routes/salesItems';
 import debtTransactionsV2Routes from './routes/debtTransactionsV2';
 import debtRecurrenceTemplatesRoutes from './routes/debtRecurrenceTemplates';
+import debtWeeklyRecurrenceTemplatesRoutes from './routes/debtWeeklyRecurrenceTemplates';
 import { startDebtRecurrenceScheduler } from './jobs/debtRecurrenceJob';
 
 dotenv.config();
@@ -99,6 +100,7 @@ function registerRoutes(): void {
   app.use('/api/sales-items', salesItemsRoutes);
   app.use('/api/debt-transactions-v2', debtTransactionsV2Routes);
   app.use('/api/debt-recurrence-templates', debtRecurrenceTemplatesRoutes);
+  app.use('/api/debt-weekly-recurrence-templates', debtWeeklyRecurrenceTemplatesRoutes);
 }
 
 async function start() {

@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
   enumerateDueMonths,
+  enumerateDueWeeks,
+  firstOccurrenceOnOrAfter,
+  formatLocalDateOnly,
   occurrenceDateInMonth,
   parseLocalDateOnly,
   dayKey,
@@ -86,5 +89,72 @@ describe('parseLocalDateOnly', () => {
 describe('dayKey', () => {
   it('orders chronologically', () => {
     expect(dayKey(parseLocalDateOnly('2026-01-02'))).toBeLessThan(dayKey(parseLocalDateOnly('2026-02-01')));
+  });
+});
+
+describe('firstOccurrenceOnOrAfter', () => {
+  it('returns startDate when it already matches the weekday', () => {
+    // 2026-08-03 is a Monday
+    const d = firstOccurrenceOnOrAfter(parseLocalDateOnly('2026-08-03'), 1);
+    expect(formatLocalDateOnly(d)).toBe('2026-08-03');
+  });
+
+  it('advances to the next matching weekday', () => {
+    // Wednesday → next Monday
+    const d = firstOccurrenceOnOrAfter(parseLocalDateOnly('2026-08-05'), 1);
+    expect(formatLocalDateOnly(d)).toBe('2026-08-10');
+  });
+});
+
+describe('enumerateDueWeeks', () => {
+  it('includes weekly dates from first trigger through today', () => {
+    const due = enumerateDueWeeks({
+      startDate: parseLocalDateOnly('2026-08-03'), // Monday
+      endDate: null,
+      dayOfWeek: 1,
+      today: parseLocalDateOnly('2026-08-24'),
+    });
+    expect(due.map((d) => formatLocalDateOnly(d.occurrenceDate))).toEqual([
+      '2026-08-03',
+      '2026-08-10',
+      '2026-08-17',
+      '2026-08-24',
+    ]);
+  });
+
+  it('starts from the next trigger day when start is mid-week', () => {
+    const due = enumerateDueWeeks({
+      startDate: parseLocalDateOnly('2026-08-05'), // Wednesday
+      endDate: null,
+      dayOfWeek: 1, // Monday
+      today: parseLocalDateOnly('2026-08-17'),
+    });
+    expect(due.map((d) => formatLocalDateOnly(d.occurrenceDate))).toEqual([
+      '2026-08-10',
+      '2026-08-17',
+    ]);
+  });
+
+  it('excludes dates after today', () => {
+    const due = enumerateDueWeeks({
+      startDate: parseLocalDateOnly('2026-08-03'),
+      endDate: null,
+      dayOfWeek: 1,
+      today: parseLocalDateOnly('2026-08-09'),
+    });
+    expect(due.map((d) => formatLocalDateOnly(d.occurrenceDate))).toEqual(['2026-08-03']);
+  });
+
+  it('respects inclusive endDate', () => {
+    const due = enumerateDueWeeks({
+      startDate: parseLocalDateOnly('2026-08-03'),
+      endDate: parseLocalDateOnly('2026-08-12'),
+      dayOfWeek: 1,
+      today: parseLocalDateOnly('2026-08-31'),
+    });
+    expect(due.map((d) => formatLocalDateOnly(d.occurrenceDate))).toEqual([
+      '2026-08-03',
+      '2026-08-10',
+    ]);
   });
 });

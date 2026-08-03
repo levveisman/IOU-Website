@@ -96,6 +96,49 @@ export async function ensureRuntimeSchema(): Promise<void> {
       ON debt_recurrence_occurrences(template_id)
     `);
 
+    // Weekly debt recurrence (day_of_week: 1=Mon … 7=Sun; occurrences keyed by date).
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS debt_weekly_recurrence_templates (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        from_entity TEXT NOT NULL CHECK (
+          from_entity IN ('lev', 'danik', '2masters')
+        ),
+        to_entity TEXT NOT NULL CHECK (
+          to_entity IN ('lev', 'danik', '2masters')
+        ),
+        amount DECIMAL(10, 2) NOT NULL CHECK (amount > 0),
+        description TEXT,
+        day_of_week INTEGER NOT NULL CHECK (day_of_week >= 1 AND day_of_week <= 7),
+        start_date DATE NOT NULL,
+        end_date DATE,
+        active BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT debt_weekly_recurrence_different_entities CHECK (from_entity != to_entity),
+        CONSTRAINT debt_weekly_recurrence_end_after_start CHECK (end_date IS NULL OR end_date >= start_date)
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS debt_weekly_recurrence_occurrences (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        template_id UUID NOT NULL REFERENCES debt_weekly_recurrence_templates(id) ON DELETE CASCADE,
+        occurrence_date DATE NOT NULL,
+        transaction_id UUID NOT NULL REFERENCES debt_transactions_v2(id) ON DELETE RESTRICT,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (template_id, occurrence_date)
+      )
+    `);
+
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_debt_weekly_recurrence_templates_active
+      ON debt_weekly_recurrence_templates(active) WHERE active = TRUE
+    `);
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_debt_weekly_recurrence_occurrences_template
+      ON debt_weekly_recurrence_occurrences(template_id)
+    `);
+
     // Sales tracker (see addSalesTransactionsTable / addQuantity / addSeller migrations).
     // Older volumes never ran those scripts; Docker only runs this file before the server.
     await pool.query(`
@@ -171,6 +214,16 @@ export async function ensureRuntimeSchema(): Promise<void> {
     await pool.query(`
       CREATE TRIGGER update_sales_items_updated_at
       BEFORE UPDATE ON sales_items
+      FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()
+    `);
+
+    await pool.query(`
+      DROP TRIGGER IF EXISTS update_debt_weekly_recurrence_templates_updated_at
+      ON debt_weekly_recurrence_templates
+    `);
+    await pool.query(`
+      CREATE TRIGGER update_debt_weekly_recurrence_templates_updated_at
+      BEFORE UPDATE ON debt_weekly_recurrence_templates
       FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()
     `);
 

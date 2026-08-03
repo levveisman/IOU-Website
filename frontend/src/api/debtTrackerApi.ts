@@ -254,3 +254,114 @@ export const deleteDebtRecurrenceTemplate = async (id: string): Promise<void> =>
     throw new Error('Network error: Failed to delete recurrence template');
   }
 };
+
+/** ISO weekday: 1 = Monday … 7 = Sunday. */
+export type IsoWeekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
+/** Global weekly debt recurrence template (server-generated transactions). */
+export interface DebtWeeklyRecurrenceTemplate {
+  id: string;
+  from: Entity;
+  to: Entity;
+  amount: number;
+  description?: string;
+  dayOfWeek: IsoWeekday;
+  startDate: string;
+  endDate: string | null;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateDebtWeeklyRecurrenceTemplatePayload {
+  from: Entity;
+  to: Entity;
+  amount: number;
+  description?: string;
+  dayOfWeek: IsoWeekday;
+  startDate: string;
+  endDate?: string | null;
+  active?: boolean;
+}
+
+export const listDebtWeeklyRecurrenceTemplates = async (): Promise<DebtWeeklyRecurrenceTemplate[]> => {
+  try {
+    const response = await axios.get('/api/debt-weekly-recurrence-templates', { withCredentials: true });
+    return response.data.templates;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const errorData = error.response?.data?.error;
+      const message =
+        typeof errorData === 'string'
+          ? errorData
+          : errorData?.message || 'Failed to list weekly recurrence templates';
+      throw new Error(message);
+    }
+    throw new Error('Network error: Failed to list weekly recurrence templates');
+  }
+};
+
+export const createDebtWeeklyRecurrenceTemplate = async (
+  payload: CreateDebtWeeklyRecurrenceTemplatePayload
+): Promise<{ template: DebtWeeklyRecurrenceTemplate; warnings: string[] }> => {
+  try {
+    const response = await axios.post('/api/debt-weekly-recurrence-templates', payload, {
+      withCredentials: true,
+    });
+    return {
+      template: response.data.template,
+      warnings: response.data.warnings ?? [],
+    };
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const errorData = error.response?.data?.error;
+      const message =
+        typeof errorData === 'string'
+          ? errorData
+          : errorData?.message || 'Failed to create weekly recurrence template';
+      throw new Error(message);
+    }
+    throw new Error('Network error: Failed to create weekly recurrence template');
+  }
+};
+
+export const updateDebtWeeklyRecurrenceTemplate = async (
+  id: string,
+  payload: Partial<CreateDebtWeeklyRecurrenceTemplatePayload> & { active?: boolean }
+): Promise<{ template: DebtWeeklyRecurrenceTemplate; warnings: string[] }> => {
+  try {
+    const response = await axios.put(`/api/debt-weekly-recurrence-templates/${id}`, payload, {
+      withCredentials: true,
+    });
+    return {
+      template: response.data.template,
+      warnings: response.data.warnings ?? [],
+    };
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const errorData = error.response?.data?.error;
+      const message =
+        typeof errorData === 'string'
+          ? errorData
+          : errorData?.message || 'Failed to update weekly recurrence template';
+      throw new Error(message);
+    }
+    throw new Error('Network error: Failed to update weekly recurrence template');
+  }
+};
+
+export const deleteDebtWeeklyRecurrenceTemplate = async (id: string): Promise<void> => {
+  try {
+    await axios.delete(`/api/debt-weekly-recurrence-templates/${id}`, { withCredentials: true });
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const errorData = error.response?.data?.error;
+      const message =
+        typeof errorData === 'string'
+          ? errorData
+          : errorData?.message || 'Failed to delete weekly recurrence template';
+      throw new Error(message);
+    }
+    throw new Error('Network error: Failed to delete weekly recurrence template');
+  }
+};

@@ -4,6 +4,8 @@ SET timezone = 'Australia/Melbourne';
 
 -- Drop tables if they exist (for development)
 DROP TABLE IF EXISTS transactions CASCADE;
+DROP TABLE IF EXISTS debt_weekly_recurrence_occurrences CASCADE;
+DROP TABLE IF EXISTS debt_weekly_recurrence_templates CASCADE;
 DROP TABLE IF EXISTS debt_recurrence_occurrences CASCADE;
 DROP TABLE IF EXISTS debt_recurrence_templates CASCADE;
 DROP TABLE IF EXISTS debt_transactions_v2 CASCADE;
@@ -89,6 +91,36 @@ CREATE TABLE debt_recurrence_occurrences (
   UNIQUE (template_id, calendar_year, calendar_month)
 );
 
+-- Weekly debt recurrence templates (day_of_week: 1=Mon … 7=Sun)
+CREATE TABLE debt_weekly_recurrence_templates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  from_entity TEXT NOT NULL CHECK (
+    from_entity IN ('lev', 'danik', '2masters')
+  ),
+  to_entity TEXT NOT NULL CHECK (
+    to_entity IN ('lev', 'danik', '2masters')
+  ),
+  amount DECIMAL(10, 2) NOT NULL CHECK (amount > 0),
+  description TEXT,
+  day_of_week INTEGER NOT NULL CHECK (day_of_week >= 1 AND day_of_week <= 7),
+  start_date DATE NOT NULL,
+  end_date DATE,
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT debt_weekly_recurrence_different_entities CHECK (from_entity != to_entity),
+  CONSTRAINT debt_weekly_recurrence_end_after_start CHECK (end_date IS NULL OR end_date >= start_date)
+);
+
+CREATE TABLE debt_weekly_recurrence_occurrences (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  template_id UUID NOT NULL REFERENCES debt_weekly_recurrence_templates(id) ON DELETE CASCADE,
+  occurrence_date DATE NOT NULL,
+  transaction_id UUID NOT NULL REFERENCES debt_transactions_v2(id) ON DELETE RESTRICT,
+  created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (template_id, occurrence_date)
+);
+
 -- Leave records table
 CREATE TABLE leave_records (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -138,6 +170,8 @@ CREATE INDEX idx_transactions_date ON transactions(date);
 CREATE INDEX idx_debt_transactions_v2_timestamp ON debt_transactions_v2(timestamp DESC);
 CREATE INDEX idx_debt_recurrence_templates_active ON debt_recurrence_templates(active) WHERE active = TRUE;
 CREATE INDEX idx_debt_recurrence_occurrences_template ON debt_recurrence_occurrences(template_id);
+CREATE INDEX idx_debt_weekly_recurrence_templates_active ON debt_weekly_recurrence_templates(active) WHERE active = TRUE;
+CREATE INDEX idx_debt_weekly_recurrence_occurrences_template ON debt_weekly_recurrence_occurrences(template_id);
 CREATE INDEX idx_leave_records_user ON leave_records(user_id);
 CREATE INDEX idx_leave_records_dates ON leave_records(start_date, end_date);
 CREATE INDEX idx_public_holidays_date ON public_holidays(date);
@@ -174,6 +208,9 @@ CREATE TRIGGER update_birthdays_updated_at BEFORE UPDATE ON birthdays
 CREATE TRIGGER update_debt_recurrence_templates_updated_at BEFORE UPDATE ON debt_recurrence_templates
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+CREATE TRIGGER update_debt_weekly_recurrence_templates_updated_at BEFORE UPDATE ON debt_weekly_recurrence_templates
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- Insert default users (passwords will be hashed in application)
 -- Note: Do NOT insert placeholder password hashes here.
 -- Default users are created by `src/scripts/setupDatabase.ts`.
@@ -183,6 +220,8 @@ COMMENT ON TABLE transactions IS 'Records money transfers between users';
 COMMENT ON TABLE debt_transactions_v2 IS 'Transaction-based debt tracking for Lev, Danik, and 2Masters';
 COMMENT ON TABLE debt_recurrence_templates IS 'Global monthly templates for automated debt_transactions_v2 inserts';
 COMMENT ON TABLE debt_recurrence_occurrences IS 'One row per template per calendar month for idempotent generation';
+COMMENT ON TABLE debt_weekly_recurrence_templates IS 'Global weekly templates for automated debt_transactions_v2 inserts (day_of_week: 1=Mon … 7=Sun)';
+COMMENT ON TABLE debt_weekly_recurrence_occurrences IS 'One row per template per occurrence date for idempotent generation';
 COMMENT ON TABLE leave_records IS 'Tracks employee leave with business day calculations';
 COMMENT ON TABLE public_holidays IS 'Stores nationally recognized holidays';
 COMMENT ON TABLE closed_dates IS 'Stores company closure periods';

@@ -1,4 +1,4 @@
-import { addMonths, startOfMonth } from 'date-fns';
+import { addDays, addMonths, startOfMonth } from 'date-fns';
 
 /** Parse YYYY-MM-DD as a local calendar date at midnight. */
 export function parseLocalDateOnly(isoDate: string): Date {
@@ -36,6 +36,24 @@ export function occurrenceDateInMonth(year: number, month1Based: number, dayOfMo
 /** YYYYMMDD integer for reliable date-only ordering. */
 export function dayKey(d: Date): number {
   return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+}
+
+/** ISO weekday: 1 = Monday … 7 = Sunday. */
+export function toIsoWeekday(d: Date): number {
+  const js = d.getDay(); // 0 = Sunday … 6 = Saturday
+  return js === 0 ? 7 : js;
+}
+
+/** First calendar date on or after `from` that falls on `dayOfWeek` (1=Mon … 7=Sun). */
+export function firstOccurrenceOnOrAfter(from: Date, dayOfWeek: number): Date {
+  if (!Number.isInteger(dayOfWeek) || dayOfWeek < 1 || dayOfWeek > 7) {
+    throw new Error(`dayOfWeek must be an integer from 1 to 7, got ${dayOfWeek}`);
+  }
+  let cursor = new Date(from.getFullYear(), from.getMonth(), from.getDate(), 0, 0, 0, 0);
+  while (toIsoWeekday(cursor) !== dayOfWeek) {
+    cursor = addDays(cursor, 1);
+  }
+  return cursor;
 }
 
 export type DueMonthPeriod = { year: number; month: number; occurrenceDate: Date };
@@ -80,6 +98,36 @@ export function enumerateDueMonths(params: {
 
     out.push({ year, month, occurrenceDate });
     cursor = addMonths(cursor, 1);
+  }
+
+  return out;
+}
+
+export type DueWeekPeriod = { occurrenceDate: Date };
+
+/**
+ * Weekly due dates on/after startDate, on/before today, and on/before endDate when set.
+ * First charge is the next matching weekday on or after startDate (no backfill before start).
+ */
+export function enumerateDueWeeks(params: {
+  startDate: Date;
+  endDate: Date | null;
+  dayOfWeek: number;
+  today: Date;
+}): DueWeekPeriod[] {
+  const { startDate, endDate, dayOfWeek, today } = params;
+  const todayKey = dayKey(today);
+  const endKey = endDate ? dayKey(endDate) : null;
+
+  const out: DueWeekPeriod[] = [];
+  let cursor = firstOccurrenceOnOrAfter(startDate, dayOfWeek);
+
+  while (dayKey(cursor) <= todayKey) {
+    if (endKey !== null && dayKey(cursor) > endKey) {
+      break;
+    }
+    out.push({ occurrenceDate: cursor });
+    cursor = addDays(cursor, 7);
   }
 
   return out;

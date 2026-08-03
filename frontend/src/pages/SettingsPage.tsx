@@ -18,7 +18,7 @@ import PublicHolidaysManager from '../components/PublicHolidaysManager';
 import BirthdaysManager from '../components/BirthdaysManager';
 import NotificationSettings from '../components/NotificationSettings';
 import SalesItemsManager from '../components/SalesItemsManager';
-import MonthlyRecurrencePanel from '../components/MonthlyRecurrencePanel';
+import DebtRecurrenceSettings from '../components/DebtRecurrenceSettings';
 import {
   DndContext,
   closestCenter,
@@ -126,7 +126,7 @@ const SettingsPage: React.FC = () => {
     { id: 'birthdays', label: 'Birthdays', component: <BirthdaysManager /> },
     { id: 'notifications', label: 'Notifications', component: <NotificationSettings /> },
     { id: 'sales-items', label: 'Sales Items', component: <SalesItemsManager /> },
-    { id: 'debt-recurrence', label: 'Debt Recurrence', component: <MonthlyRecurrencePanel /> },
+    { id: 'debt-recurrence', label: 'Debt Recurrence', component: <DebtRecurrenceSettings /> },
   ];
 
   // Load tab order from localStorage or use default
