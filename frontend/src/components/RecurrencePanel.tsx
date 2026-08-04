@@ -69,7 +69,7 @@ const CONFIG = {
     defaultDay: '1',
   },
   weekly: {
-    addTitle: 'Add weekly charge1',
+    addTitle: 'Add weekly charge',
     hint: 'Charges on the chosen weekday each week, starting from the next trigger day.',
     listTitle: 'Weekly templates',
     editTitle: 'Edit weekly template',
