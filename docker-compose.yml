@@ -106,8 +106,14 @@ services:
           ts="$$(date +%Y%m%d_%H%M%S)"
           out="/backup/iou_$${ts}.dump"
           echo "Starting backup $$out"
-          if pg_dump -Fc -f "$$out"; then echo "Backup finished $$out"
-          else echo "Backup failed (exit $$?)" >&2
+          if pg_dump -Fc -f "$$out"; then
+            echo "Backup finished $$out"
+            ls -t /backup/iou_*.dump 2>/dev/null | tail -n +6 | while read -r old; do
+              echo "Removing old backup $$old"
+              rm -f "$$old"
+            done
+          else
+            echo "Backup failed (exit $$?)" >&2
           fi
           sleep 86400
         done

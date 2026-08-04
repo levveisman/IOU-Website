@@ -1,0 +1,15 @@
+services:
+  github-runner:
+    image: myoung34/github-runner:latest
+    container_name: iou-github-runner
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - REPO_URL=https://github.com/levveisman/IOU-Website
+      - RUNNER_NAME=iou-server
+      - RUNNER_LABELS=self-hosted,ubuntu,docker,iou
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Same host path so deploy jobs can sync into the live compose project
+      - /home/odoo/docker/IOU-Website:/home/odoo/docker/IOU-Website

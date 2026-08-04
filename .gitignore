@@ -12,6 +12,7 @@ build/
 .env
 .env.local
 .env.*.local
+!runners/.env.example
 
 # Logs
 logs
